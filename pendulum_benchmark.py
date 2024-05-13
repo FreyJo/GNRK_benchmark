@@ -300,6 +300,7 @@ def plot_trajectories_paper():
         u_lables_list,
         labels_all,
         # title='closed loop' if CLOSED_LOOP else 'open loop',
+        figsize=(6.0, 7.7),
         idxpx=[4, 0, 1],
         linestyle_list=linestyle_list,
         color_list=color_list,
@@ -378,7 +379,11 @@ def pareto_plot_paper():
 
     # plot_pareto(points, settings_plot, [COST_DISCRETIZATION_VARIANTS, N_VALUES, time_grid_values_plot, T_horizon_values], [0, 2, 1, 3], labels_all, fig_filename='pendulum_gnrk_pareto.pdf', special_points=special_points, special_labels=special_labels, xlabel='relative suboptimality [\%]', ylabel='max computation time [ms]')
 
-    plot_simple_pareto(points, fig_filename='pendulum_gnrk_pareto.pdf', special_points=special_points, special_labels=special_labels, xlabel='relative suboptimality [\%]', ylabel='max computation time [ms]')
+    plot_simple_pareto(points, fig_filename='pendulum_gnrk_pareto.pdf',
+                       special_points=special_points, special_labels=special_labels,
+                       xlabel='relative suboptimality [\%]', ylabel='max computation time [ms]',
+                       figsize=(6.0, 4.0),
+                       )
 
 
 

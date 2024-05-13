@@ -95,6 +95,7 @@ def plot_simulation_result(
     x_labels_list,
     u_labels_list,
     labels_list,
+    figsize=None,
     X_ref=None,
     U_ref=None,
     fig_filename=None,
@@ -147,9 +148,13 @@ def plot_simulation_result(
 
     latexify_plot()
     if single_column:
-        fig, axes = plt.subplots(ncols=1, nrows=nxpx+nxpu, figsize=(5.5, 1.65*(nxpx+nxpu+1)), sharex=True)
+        if figsize is None:
+            figsize=(5.5, 1.65*(nxpx+nxpu+1))
+        fig, axes = plt.subplots(ncols=1, nrows=nxpx+nxpu, figsize=figsize, sharex=True)
     else:
-        fig, axes = plt.subplots(ncols=2, nrows=nrows, figsize=(10, (nxpx+nxpu)))
+        if figsize is None:
+            figsize = (10, (nxpx+nxpu))
+        fig, axes = plt.subplots(ncols=2, nrows=nrows, figsize=figsize)
         axes = np.ravel(axes, order='F')
 
     if title is not None:
@@ -220,10 +225,11 @@ def plot_simulation_result(
     # TODO: nice logic for bbox anchor
     if show_legend:
         if single_column:
-            axes[nxpx+nxpu-1].legend(loc="lower center", ncol=2, bbox_to_anchor=(0.4, -.7)) #bbox_to_anchor=(0.5, -1.5), , handlelength=1.)
+            axes[nxpx+nxpu-1].legend(loc="lower center", ncol=2, bbox_to_anchor=(0.45, -.8)) #bbox_to_anchor=(0.5, -1.5), , handlelength=1.)
         else:
             axes[nxpx-1].legend(loc="lower center", ncol=2, bbox_to_anchor=(1.0, -0))
             # axes[nxpx+nxpu-1].legend(bbox_to_anchor=(0.5, -1.5), loc="lower center")
+    fig.align_ylabels()
 
 
     # plt.subplots_adjust(
@@ -302,9 +308,11 @@ def plot_pareto(points, settings, settings_lists, idx_setting, labels,
     plt.show()
 
 
-def plot_simple_pareto(points, fig_filename: Optional[str], special_points=None, special_labels=None, xlabel=None, ylabel=None):
+def plot_simple_pareto(points, fig_filename: Optional[str], special_points=None, special_labels=None, xlabel=None, ylabel=None, figsize=None):
     latexify_plot()
-    fig, axes = plt.subplots(ncols=1, nrows=1, figsize=(6.6, 4.5))
+    if figsize is None:
+        figsize=(6.6, 4.4)
+    fig, axes = plt.subplots(ncols=1, nrows=1, figsize=figsize)
     cmap = plt.get_cmap("tab10")
 
     for p in points:

@@ -173,6 +173,6 @@ def plot_convergence_rates(loglog=False):
     plt.show()
 
 if __name__ == "__main__":
-    # experiment()
+    experiment()
     # plot_convergence_rates()
     plot_convergence_rates(loglog=False)
