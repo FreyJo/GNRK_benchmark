@@ -4,10 +4,10 @@ import json
 import pickle
 
 from setup_acados_ocp_solver import (
-    MpcPendulumParameters,
     setup_acados_ocp_solver,
     AcadosOcpSolver,
 )
+from mpc_parameters import MpcPendulumParameters
 from models import setup_pendulum_model, augment_model_with_cost_state, modify_model_to_use_cost_state
 from utils import get_label_from_setting, get_results_filename, get_latex_label_from_setting, RESULTS_FOLDER
 from acados_template import latexify_plot

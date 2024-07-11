@@ -38,12 +38,14 @@ import pickle
 
 from setup_acados_integrator import setup_acados_integrator
 from setup_acados_ocp_solver import (
-    MpcPendulumParameters,
     setup_acados_ocp_solver,
     AcadosOcpSolver,
+    augment_model_with_cost_state,
 )
-from models import setup_linearized_model, augment_model_with_cost_state, setup_pendulum_model, modify_model_to_use_cost_state
-from utils import plot_simulation_result, get_label_from_setting, get_results_filename, get_latex_label_from_setting, plot_pareto, plot_simple_pareto, TEX_FOLDER
+from mpc_parameters import MpcPendulumParameters
+
+from models import setup_linearized_model, setup_pendulum_model, modify_model_to_use_cost_state
+from utils import plot_simulation_result, get_latex_label_from_setting, plot_pareto, plot_simple_pareto, TEX_FOLDER, RESULTS_FOLDER
 from simulate import simulate
 
 dummy_model, dummy_model_params = setup_pendulum_model()
@@ -100,6 +102,17 @@ SETTINGS_PARETO = []
 SETTINGS_PARETO = ALL_SETTINGS
 
 
+def get_label_from_setting(setting):
+    label = f"{setting[0]} N = {setting[1]} n_s = {setting[2]} {'RTI' if setting[3] else ''}"
+    for i in range(4, len(setting)):
+        label += f" {str(setting[i])}"
+    return label
+
+def get_results_filename(label: str, model_name: str, dt_plant: float, closed_loop: bool):
+    loop = 'CL' if closed_loop else 'OL'
+    return os.path.join(RESULTS_FOLDER, f"results_{loop}_{model_name}_dtplant_{dt_plant}_{label.replace(' ', '_').replace('=', '_')}.pkl")
+
+
 def run_pendulum_benchmark_closed_loop(settings):
 
     Tsim = 4.0
@@ -124,6 +137,7 @@ def run_pendulum_benchmark_closed_loop(settings):
 
     labels_all = []
 
+    ocp_solver: AcadosOcpSolver
 
     for setting in settings:
         label = get_label_from_setting(setting)
@@ -151,11 +165,13 @@ def run_pendulum_benchmark_closed_loop(settings):
         mpc_params.sim_method_num_stages = setting[2]
         use_rti = setting[3]
         time_grid = setting[4]
-
-        ocp_solver: AcadosOcpSolver = setup_acados_ocp_solver(model,
+        ocp_solver, _ = setup_acados_ocp_solver(model,
                 model_params, mpc_params, use_rti=use_rti, time_grid=time_grid, levenberg_marquardt=levenberg_marquardt,
                 hessian_approx=hessian_approx,
-                exact_hess_dyn=exact_hess_dyn)
+                exact_hess_dyn=exact_hess_dyn,
+                degree_u_polynom=0,
+                cost_type="NONLINEAR_LS",
+                )
 
         print(f"{setting=}, {mpc_params.T}")
 
@@ -194,12 +210,14 @@ def plot_trajectories():
     for setting in SETTINGS:
         label = get_label_from_setting(setting)
         results_filename = get_results_filename(label, dummy_model.name, DT_PLANT, closed_loop=True)
+        latex_label = get_latex_label_from_setting(setting).replace(', n_s = 4', '').replace('GNRK', '').replace('nonuniform', '')
         with open(results_filename, 'rb') as f:
             results = pickle.load(f)
         if results['status'] == 0:
             X_all.append(results['x_traj'])
             U_all.append(results['u_traj'])
-            labels_all.append(results['label'])
+            # labels_all.append(results['label'])
+            labels_all.append(latex_label)
 
             # doesnt matter when we unpack this
             X_ref = results['x_ref']
@@ -211,9 +229,10 @@ def plot_trajectories():
         else:
             print(f"Simulation failed with {label}")
 
-    # compare trajectories
-    x_lables_list = ["$p$ [m]", r"$\theta$ [rad/s]", "$v$ [m/s]", r"$\dot{\theta}$", r"cost state [k\$]"]
+
+    x_lables_list = ["$p$ [m]", r"$\theta$ [rad/s]", "$s$ [m/s]", r"$\dot{\theta}$", r"cost state"]
     u_lables_list = ["$u$ [N]"]
+
     plot_simulation_result(
         DT_PLANT,
         X_all,
@@ -223,11 +242,17 @@ def plot_trajectories():
         x_lables_list,
         u_lables_list,
         labels_all,
+        # title='closed loop' if CLOSED_LOOP else 'open loop',
+        idxpx=[4, 0, 1],
         title='closed loop',
         X_ref=X_ref,
         U_ref=U_ref,
-        linestyle_list=['--', ':', '--', ':'],
-        color_list=['C0', 'C0', 'C1', 'C1']
+        linestyle_list=['--', ':', '--', ':', '--', '-.'],
+        single_column=True,
+        xlabel='$t$ [s]',
+        # idx_xlogy= [4],
+        # color_list=['C0', 'C0', 'C1', 'C1']
+        fig_filename='pendulum_trajectories_wip.pdf',
     )
 
 
@@ -300,7 +325,6 @@ def plot_trajectories_paper():
         u_lables_list,
         labels_all,
         # title='closed loop' if CLOSED_LOOP else 'open loop',
-        figsize=(6.0, 7.7),
         idxpx=[4, 0, 1],
         linestyle_list=linestyle_list,
         color_list=color_list,
@@ -520,5 +544,3 @@ if __name__ == "__main__":
     plot_trajectories_paper()
     closed_loop_cost_table_paper()
     pareto_plot_paper()
-
-    # plot_trajectories()

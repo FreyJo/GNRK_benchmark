@@ -1,15 +1,18 @@
 from typing import Optional
 import numpy as np
-from setup_acados_integrator import setup_acados_integrator, AcadosSimSolver
-from setup_acados_ocp_solver import (
-    AcadosOcpSolver,
+from setup_acados_integrator import setup_acados_integrator
+from acados_template import (
+    AcadosOcpSolver, AcadosSimSolver, AcadosMultiphaseOcp, AcadosOcp
 )
 from models import ModelParameters
 
 
 def initialize_controller(controller: AcadosOcpSolver, model_params: ModelParameters, x0: np.ndarray):
     time_steps = controller.acados_ocp.solver_options.time_steps
-    nx_ocp = controller.acados_ocp.dims.nx
+    if isinstance(controller.acados_ocp, AcadosOcp):
+        nx_ocp = controller.acados_ocp.dims.nx
+    elif isinstance(controller.acados_ocp, AcadosMultiphaseOcp):
+        nx_ocp = controller.acados_ocp.phases_dims[0].nx
 
     # append zeros to x0 for
     nx0 = x0.size
@@ -18,6 +21,7 @@ def initialize_controller(controller: AcadosOcpSolver, model_params: ModelParame
 
     t = 0.0
     T = sum(time_steps)
+    controller.set(0, 'x', x0_ocp)
     for i, dt in enumerate(time_steps):
         u_guess = model_params.us
         # linspace in time between x0 and xs
@@ -32,8 +36,14 @@ def initialize_controller(controller: AcadosOcpSolver, model_params: ModelParame
 
         controller.set(i+1, 'x', x_init)
         if i<controller.N:
-            controller.set(i, 'u', u_guess)
+            if isinstance(controller.acados_ocp, AcadosOcp):
+                controller.set(i, 'u', u_guess)
+            elif isinstance(controller.acados_ocp, AcadosMultiphaseOcp):
+                controller.set(i, 'u', 0*controller.get(i, 'u'))
             t += dt
+
+    # last stage
+    controller.set(controller.N, 'x', x_init)
 
     return
 
@@ -50,13 +60,16 @@ def simulate(
     nx = plant.acados_sim.dims.nx
     nu = plant.acados_sim.dims.nu
 
-    nx_ocp = controller.acados_ocp.dims.nx
+    if isinstance(controller.acados_ocp, AcadosOcp):
+        nx_ocp = controller.acados_ocp.dims.nx
+    elif isinstance(controller.acados_ocp, AcadosMultiphaseOcp):
+        nx_ocp = controller.acados_ocp.phases_dims[0].nx
 
     X_sim = np.ndarray((Nsim + 1, nx))
     U_sim = np.ndarray((Nsim, nu))
 
-    X_ref = np.zeros((Nsim+1, model_params.nx_original))
-    U_ref = np.zeros((Nsim, model_params.nu_original))
+    X_ref = np.tile(model_params.xs, (Nsim+1, 1))
+    U_ref = np.tile(model_params.us, (Nsim, 1))
     timings_solver = np.zeros((Nsim))
     timings_integrator = np.zeros((Nsim))
     nlp_iter = np.zeros((Nsim))
@@ -64,7 +77,8 @@ def simulate(
     for irun in range(n_runs):
         if controller is not None:
             controller.reset()
-            initialize_controller(controller, model_params, x0)
+            # initialize_controller(controller, model_params, x0)
+            initialize_controller(controller, model_params, model_params.xs)
 
         # closed loop
         xcurrent = np.concatenate((x0.T, np.zeros((nx-model_params.nx_original))))

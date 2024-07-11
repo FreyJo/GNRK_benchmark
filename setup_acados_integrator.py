@@ -31,8 +31,7 @@
 
 # authors: Katrin Baumgaertner, Jonathan Frey
 
-from acados_template import AcadosSim, AcadosSimSolver
-from utils import casadi_length
+from acados_template import AcadosSim, AcadosSimSolver, casadi_length
 import numpy as np
 
 

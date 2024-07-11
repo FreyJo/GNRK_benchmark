@@ -2,12 +2,11 @@ import casadi as ca
 import numpy as np
 
 from dataclasses import dataclass
-from acados_template import AcadosModel, casadi_length
+from acados_template import AcadosModel
 
-from utils import compute_lqr_gain, get_nbx_violation_expression
-from setup_acados_ocp_solver import MpcParameters
+from utils import compute_lqr_gain
 
-from typing import Tuple
+from typing import Tuple, Optional
 
 @dataclass
 class ModelParameters:
@@ -18,84 +17,8 @@ class ModelParameters:
     parameter_values : np.ndarray = None
     cost_state_idx: int = None
     cost_state_dyn_fun = None
-
-
-def augment_model_with_clock_state(model: AcadosModel):
-
-    t = ca.SX.sym('t')
-    tdot = ca.SX.sym('tdot')
-
-    model.x = ca.vertcat(model.x, t)
-    model.xdot = ca.vertcat(model.xdot, tdot)
-    model.f_expl_expr = ca.vertcat(model.f_expl_expr, 1)
-    model.f_impl_expr = model.f_expl_expr - model.xdot
-
-    model.clock_state = t
-
-    return model
-
-def augment_model_with_picewise_linear_u(model: AcadosModel, model_params: ModelParameters, mpc_params: MpcParameters):
-
-    model = augment_model_with_clock_state(model)
-    nu = casadi_length(model.u)
-    # new controls
-    u_0 = ca.SX.sym('u_0', nu)
-    u_1 = ca.SX.sym('u_1', nu)
-    mpc_params.umin = np.concatenate((mpc_params.umin, mpc_params.umin))
-    mpc_params.umax = np.concatenate((mpc_params.umax, mpc_params.umax))
-    # parameters
-    clock_state0 = ca.SX.sym('clock_state0', 1)
-    delta_t_n = ca.SX.sym('delta_t_n', 1)
-    model.p = ca.vertcat(model.p, clock_state0, delta_t_n)
-
-    tau = (model.clock_state - clock_state0) / delta_t_n
-
-    u_pwlin = u_0 * (1 - tau) + u_1 * tau
-    model.f_expl_expr = ca.substitute(model.f_expl_expr, model.u, u_pwlin)
-    model.f_impl_expr = ca.substitute(model.f_impl_expr, model.u, u_pwlin)
-    model.cost_y_expr = ca.substitute(model.cost_y_expr, model.u, u_pwlin)
-
-    model_params.xs = np.append(model_params.xs, [0.0])
-    model_params.us = np.concatenate((model_params.us, model_params.us))
-    model_params.parameter_values = np.concatenate((model_params.parameter_values, [0.0, 0.0]))
-
-    model.u = ca.vertcat(u_0, u_1)
-    return model, model_params, mpc_params
-
-
-
-def augment_model_with_cost_state(model: AcadosModel, params: ModelParameters, mpc_params: MpcParameters):
-
-    cost_state = ca.SX.sym('cost_state')
-    cost_state_dot = ca.SX.sym('cost_state_dot')
-
-    x_ref = ca.SX.sym('x_ref', params.nx_original)
-    u_ref = ca.SX.sym('u_ref', params.nu_original)
-    xdiff = x_ref - model.x[:params.nx_original]
-    udiff = u_ref - model.u[:params.nu_original]
-
-    cost_state_dyn = .5 * (xdiff.T @ mpc_params.Q @xdiff + udiff.T @mpc_params.R @udiff)
-    if mpc_params.lbx is not None:
-        nbx = mpc_params.lbx.size
-        # formulate as cost!
-        x = model.x
-        violation_expr = get_nbx_violation_expression(model, mpc_params)
-        cost_state_dyn += 0.5 * (violation_expr.T @ mpc_params.gamma_penalty*np.eye(nbx) @ violation_expr)
-
-    model.x = ca.vertcat(model.x, cost_state)
-    params.cost_state_idx = casadi_length(model.x) - 1
-    params.cost_state_dyn_fun = ca.Function('cost_state_dyn_fun', [model.x, model.u, x_ref, u_ref], [cost_state_dyn])
-    model.xdot = ca.vertcat(model.xdot, cost_state_dot)
-    model.f_expl_expr = ca.vertcat(model.f_expl_expr, cost_state_dyn)
-    model.f_impl_expr = model.f_expl_expr - model.xdot
-    model.p = ca.vertcat(model.p, x_ref, u_ref)
-
-    params.parameter_values = np.concatenate((params.parameter_values, np.zeros(params.nx_original + params.nu_original)))
-    params.xs = np.append(params.xs, [0.0])
-
-    return model
-
-
+    xlabels: Optional[list] = None
+    ulabels: Optional[list] = None
 
 def modify_model_to_use_cost_state(model: AcadosModel, model_params: ModelParameters) -> AcadosModel:
     model.cost_expr_ext_cost = 0 # model.x[model_params.cost_state_idx]
@@ -119,6 +42,81 @@ def setup_linearized_model(model, model_params, mpc_params):
     print(f"P_mat {P}")
     return model, model_params
 
+
+def substitute_u_with_squashed_lqr(model: AcadosModel, mpc_params, K_mat):
+
+    # reformulate model with squashing function
+    u_lqr = -K_mat @ model.x
+
+    # define squashing function
+    if np.any(mpc_params.umax != -mpc_params.umin):
+        u_center = (mpc_params.umax + mpc_params.umin)/2
+        u_width_half = (mpc_params.umax - mpc_params.umin)/2
+        u_squashed = u_width_half * ca.tanh((u_lqr-u_center)/(u_width_half)) + u_center
+    else:
+        # symmetric bounds squashing
+        u_squashed = mpc_params.umax * ca.tanh(u_lqr/mpc_params.umax)
+    u_fun = ca.Function('u_fun', [model.x], [u_squashed])
+
+    # substitute model expression with squashing function
+    model.f_expl_expr = ca.substitute(model.f_expl_expr, model.u, u_squashed)
+    model.f_impl_expr = ca.substitute(model.f_impl_expr, model.u, u_squashed)
+    model.cost_y_expr = ca.substitute(model.cost_y_expr, model.u, u_squashed)
+    if hasattr(model, 'barrier'):
+        model.barrier = ca.substitute(model.barrier, model.u, u_squashed)
+
+    # remove u from model
+    mpc_params.us = np.zeros((0,1))
+    model.u = ca.SX.sym('u', 0)
+
+    return model, u_fun
+
+
+def substitute_u_with_saturated_lqr(model: AcadosModel, mpc_params, K_mat):
+
+    # reformulate model with saturating function
+    u_lqr = -K_mat @ model.x
+
+    # define saturating function
+    if np.any(mpc_params.umax != -mpc_params.umin):
+        u_center = (mpc_params.umax + mpc_params.umin)/2
+        u_width_half = (mpc_params.umax - mpc_params.umin)/2
+        u_saturated = u_width_half * ca.fmin(ca.fmax(((u_lqr-u_center)/(u_width_half)), -1), 1) + u_center
+    else:
+        # symmetric bounds saturating
+        u_saturated = mpc_params.umax * ca.fmin(ca.fmax(u_lqr/mpc_params.umax, -1), 1)
+    u_fun = ca.Function('u_fun', [model.x], [u_saturated])
+
+    # substitute model expression with saturating function
+    model.f_expl_expr = ca.substitute(model.f_expl_expr, model.u, u_saturated)
+    model.f_impl_expr = ca.substitute(model.f_impl_expr, model.u, u_saturated)
+    model.cost_y_expr = ca.substitute(model.cost_y_expr, model.u, u_saturated)
+    if hasattr(model, 'barrier'):
+        model.barrier = ca.substitute(model.barrier, model.u, u_saturated)
+
+    # remove u from model
+    mpc_params.us = np.zeros((0,1))
+    model.u = ca.SX.sym('u', 0)
+
+    return model, u_fun
+
+def substitute_u_with_lqr(model: AcadosModel, mpc_params, K_mat):
+
+    # reformulate model with squashing function
+    u_lqr = -K_mat @ model.x
+    u_fun = ca.Function('u_fun', [model.x], [u_lqr])
+
+    # reformulate model with squashing function
+    model.f_expl_expr = ca.substitute(model.f_expl_expr, model.u, u_lqr)
+    model.f_impl_expr = ca.substitute(model.f_impl_expr, model.u, u_lqr)
+    model.cost_y_expr = ca.substitute(model.cost_y_expr, model.u, u_lqr)
+    if hasattr(model, 'barrier'):
+        model.barrier = ca.substitute(model.barrier, model.u, u_lqr)
+    model.u = ca.SX.sym('u', 0)
+    mpc_params.us = np.zeros((0,1))
+    model.name = model.name + '_lqr'
+
+    return model, u_fun
 
 def setup_pendulum_model() -> Tuple[AcadosModel, ModelParameters]:
 
@@ -150,7 +148,7 @@ def setup_pendulum_model() -> Tuple[AcadosModel, ModelParameters]:
     xdot = ca.vertcat(x1_dot, theta_dot, v1_dot, dtheta_dot)
 
     # parameters
-    p = []
+    p = ca.SX.sym('p', 0)
 
     # dynamics
     cos_theta = ca.cos(theta)
@@ -174,6 +172,8 @@ def setup_pendulum_model() -> Tuple[AcadosModel, ModelParameters]:
     # model.z = z
     model.p = p
     model.name = model_name
+    model.x_labels=["$p$ [m]", r"$\theta$ [rad/s]", "$s$ [m/s]", r"$\omega$"]
+    model.u_labels=[r"$\nu$ [N]"]
 
     # cost
     model.cost_y_expr = ca.vertcat(x, u)
@@ -186,6 +186,8 @@ def setup_pendulum_model() -> Tuple[AcadosModel, ModelParameters]:
         xs = np.array([0.0, 0.0, 0.0, 0.0]),
         us = np.array([0.0]),
         parameter_values= np.array([]),
+        xlabels = ['x', 'theta', 'v', 'dtheta'],
+        ulabels = ['F'],
     )
 
     return model, model_params
