@@ -664,7 +664,8 @@ def pareto_plot_comparison_custom_labels(settings, labels, fig_filename='pendulu
     label='relative suboptimality [\%]'
     ylabel='Average comp. time per NLP iter. [ms]'
 
-    plot_simplest_pareto(points, labels, colors, markers, xlabel=label, ylabel=ylabel, fig_filename=fig_filename)
+    plot_simplest_pareto(points, labels, colors, markers, xlabel=label, ylabel=ylabel, fig_filename=fig_filename,
+                         bbox_to_anchor=[1.02, 1.0])
 
 
 
@@ -785,7 +786,7 @@ if __name__ == "__main__":
                       (REF_GNRK_SETTING_10, 'REF-N10',),
                       (PW_POL_SETTING_B, 'PW-LIN-B',),
                       (PW_POL_SETTING_8, 'PW-CUBIC-B',),
-                      (SETTING_CLC, 'LQR-CLC',),
+                      (SETTING_CLC, 'CLC-LQR',),
                       (SETTING_CLC_SQUASHED_PROGRESSIVE_BARRIER, 'CLC-SQB',),
                       (SETTING_NO_CLC, 'PW-CONST-A',),
                       (PW_POL_SETTING_A, 'PW-LIN-A',),
@@ -799,7 +800,7 @@ if __name__ == "__main__":
     CLC_LABEL_LIST = [label for setting, label in CLC_PAPER_SETTINGS_W_LABELS]
 
     ### Multiple shooting CLC plot
-    compute_and_plot_open_loop_solutions_clc([SETTING_CLC, SETTING_CLC_SQUASHED_PROGRESSIVE_BARRIER], variant_ids=['LQR-CLC', 'CLC-SQB'])
+    compute_and_plot_open_loop_solutions_clc([SETTING_CLC, SETTING_CLC_SQUASHED_PROGRESSIVE_BARRIER], variant_ids=['CLC-LQR', 'CLC-SQB'])
 
     ### Open-loop plot
     compute_and_plot_open_loop_solutions([REF_GNRK_SETTING_10, PW_POL_SETTING_8, PW_POL_SETTING_A, PW_POL_SETTING_5],

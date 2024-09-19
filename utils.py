@@ -480,9 +480,10 @@ def plot_simplest_pareto(
     xlabel=None,
     ylabel=None,
     title=None,
+    bbox_to_anchor=None,
 ):
     latexify_plot()
-    fig, axes = plt.subplots(ncols=1, nrows=1, figsize=(8, 4.))
+    fig, axes = plt.subplots(ncols=1, nrows=1, figsize=(8.8, 4.))
 
     if xlabel is not None:
         axes.set_xlabel(xlabel)
@@ -506,7 +507,7 @@ def plot_simplest_pareto(
 
     for p, label, marker, color in zip(points, labels, markers, colors):
         alpha = 1.0
-        fillstyle = "none"
+        fillstyle = "full"
         color = color
         axes.plot(
             p[0],
@@ -533,7 +534,7 @@ def plot_simplest_pareto(
             )
         ]
 
-    plt.legend(handles=legend_elements, ncol=2)
+    plt.legend(handles=legend_elements, ncol=1, bbox_to_anchor=bbox_to_anchor)
     plt.tight_layout()
     if fig_filename is not None:
         fig_filename = os.path.join(os.getcwd(), FIGURE_FOLDER, fig_filename)
