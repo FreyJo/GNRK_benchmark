@@ -1,7 +1,4 @@
-# About this repository:
-
-The code in this repository was tested with acados v0.3.2
-https://github.com/acados/acados/releases/tag/v0.3.2
+# About this repository
 
 ## Original benchmark
 The file `pendulum_benchmark.py` can be used to reproduce the benchmark results presented in the paper:
@@ -24,6 +21,9 @@ which can be cited as:
 }
 ```
 
+The results in this paper were obtained with acados `v0.3.2`
+https://github.com/acados/acados/releases/tag/v0.3.2
+
 
 ## Extension to NMPC controllers based on multi-phase OCP formulations
 NMPC controllers based on multi-phase OCP formulations have been compared on the same problem formulation.
@@ -33,3 +33,6 @@ The work is presented in the paper:
 "Multi-Phase Optimal Control Problems for Efficient Nonlinear Model Predictive Control with acados"
 
 by Jonathan Frey, Katrin Baumgärtner, Gianluca Frison and Moritz Diehl
+
+The results in this paper were obtained with acados `v0.4.0`
+https://github.com/acados/acados/releases/tag/v0.4.0
