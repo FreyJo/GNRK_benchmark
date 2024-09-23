@@ -616,7 +616,7 @@ def plot_trajectories(settings, labels=None, ncol_legend=1, title=None, bbox_to_
         # X_ref=X_ref,
         # U_ref=U_ref,
         linestyle_list=['--', ':', '--', ':', '--', '-.', '-.', ':'],
-        single_column=True,
+        single_column=False,
         xlabel='$t$ [s]',
         idx_xlogy= [4],
         figsize=figsize,
@@ -662,7 +662,7 @@ def pareto_plot_comparison_custom_labels(settings, labels, fig_filename='pendulu
     points = list(zip(rel_subopt, timings))
 
     label='relative suboptimality [\%]'
-    ylabel='Average comp. time per NLP iter. [ms]'
+    ylabel='Mean computation time per NLP iter. [ms]'
 
     plot_simplest_pareto(points, labels, colors, markers, xlabel=label, ylabel=ylabel, fig_filename=fig_filename,
                          bbox_to_anchor=[1.02, 1.0])
@@ -822,10 +822,10 @@ if __name__ == "__main__":
     PLOT_LABEL_LIST = [CLC_LABEL_LIST[i] for i in idx_cl_plot]
     plot_trajectories(PLOT_SETTING_LIST,
                         labels = PLOT_LABEL_LIST,
-                        ncol_legend=3,
+                        ncol_legend=2,
                         title="",
-                        bbox_to_anchor=(0.45, -0.8),
+                        bbox_to_anchor=(0.4, -1.),
                         fig_filename='pendulum_trajectories_clc.pdf',
-                        figsize=(7, 6),
+                        figsize=(12, 4),
                     )
 

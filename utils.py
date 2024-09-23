@@ -172,7 +172,10 @@ def plot_simulation_result(
             sharex=True,
         )
     else:
-        fig, axes = plt.subplots(ncols=2, nrows=nrows, figsize=(10, (nxpx + nxpu)))
+        if figsize is None:
+            figsize=(10, (nxpx + nxpu))
+        fig, axes = plt.subplots(ncols=2, nrows=nrows, figsize=figsize,
+            sharex=True)
         axes = np.ravel(axes, order="F")
 
     if title is not None:
@@ -253,10 +256,6 @@ def plot_simulation_result(
     if not single_column:
         axes[nxpx - 1].set_xlabel(xlabel)
 
-    if not single_column:
-        for i in range(nxpu, nxpx):
-            fig.delaxes(axes[i + nrows])
-
     if show_legend:
         if single_column:
             if bbox_to_anchor is None:
@@ -267,13 +266,18 @@ def plot_simulation_result(
         else:
             if bbox_to_anchor is None:
                 bbox_to_anchor = (1.0, 0.)
-            axes[nxpx - 1].legend(loc="lower center", ncol=ncol_legend, bbox_to_anchor=bbox_to_anchor)
+            axes[nxpx + nxpu - 1].legend(loc="lower center", ncol=ncol_legend, bbox_to_anchor=bbox_to_anchor)
 
     # plt.subplots_adjust(
     #     left=None, bottom=None, right=None, top=None, hspace=0.3, wspace=0.4
     # )
     fig.align_ylabels(axes)
-    plt.tight_layout()
+    # plt.tight_layout()
+
+    if not single_column:
+        for i in range(nxpu, nxpx):
+            fig.delaxes(axes[i + nrows])
+
     if fig_filename is not None:
         fig_filename = os.path.join(os.getcwd(), FIGURE_FOLDER, fig_filename)
         plt.savefig(
