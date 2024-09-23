@@ -172,7 +172,7 @@ def setup_pendulum_model() -> Tuple[AcadosModel, ModelParameters]:
     # model.z = z
     model.p = p
     model.name = model_name
-    model.x_labels=["$p$ [m]", r"$\theta$ [rad/s]", "$s$ [m/s]", r"$\omega$"]
+    model.x_labels=["$p$ [m]", r"$\theta$", "$s$ [m/s]", r"$\omega$ [rad/s]"]
     model.u_labels=[r"$\nu$ [N]"]
 
     # cost

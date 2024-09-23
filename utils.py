@@ -748,7 +748,7 @@ def plot_open_loop_trajectory_pwpol_u(
                 ubu[iu], t[0], t[-1], linestyles="dashed", alpha=0.4, color="k"
             )
 
-    axes[-1].set_xlabel("$t [s]$")
+    axes[-1].set_xlabel("$t$ [s]")
     plt.subplots_adjust(left=None, bottom=None, right=None, top=None, hspace=0.4)
 
     axes[0].set_xlim([shooting_nodes[0], shooting_nodes[-1]])
@@ -851,7 +851,7 @@ def plot_open_loop_trajectories_pwpol_u(
                 ubu[iu], t[0], t[-1], linestyles="dashed", alpha=0.4, color="k"
             )
 
-    axes[-1].set_xlabel("$t [s]$")
+    axes[-1].set_xlabel("$t$ [s]")
     plt.subplots_adjust(left=None, bottom=None, right=None, top=None, hspace=0.4)
 
     t0 = min([min(t) for t in shooting_nodes])
@@ -989,7 +989,7 @@ def plot_open_loop_trajectories_pwpol_ux(
                 ubu[iu], t[0], t[-1], linestyles="dashed", alpha=0.4, color="k"
             )
 
-    axes[-1].set_xlabel("$t [s]$")
+    axes[-1].set_xlabel("$t$ [s]")
     plt.subplots_adjust(left=None, bottom=None, right=None, top=None, hspace=0.4)
 
     t0 = min([min(t) for t in shooting_nodes])

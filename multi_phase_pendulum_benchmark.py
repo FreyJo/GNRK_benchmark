@@ -595,7 +595,7 @@ def plot_trajectories(settings, labels=None, ncol_legend=1, title=None, bbox_to_
         else:
             print(f"Simulation failed with {label}")
 
-    x_lables_list = ["$p$ [m]", r"$\theta$ [rad/s]", "$s$ [m/s]", r"$\omega$", r"cost state"]
+    x_lables_list = ["$p$ [m]", r"$\theta$ [rad]", "$s$ [m/s]", r"$\omega$ [rad/s]", r"cost state"]
     u_lables_list = [r"$\nu$ [N]"]
 
     if title is None:
